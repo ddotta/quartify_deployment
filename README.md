@@ -1,191 +1,206 @@
-# Déploiement de l'application quartify
+﻿# Quartify Deployment
 
-Ce dépôt permet le déploiement de l'application [quartify](https://github.com/ddotta/quartify) sur un cluster Kubernetes. La configuration présentée est spécifiquement adaptée au [SSP Cloud](https://datalab.sspcloud.fr/home).
+ [Version française](README_FR.md)
+
+Helm/Kubernetes configuration to deploy the Quartify web application on SSP Cloud (Onyxia).
 
 ## Description
 
-quartify est une application Shiny qui permet de convertir des scripts R en documents Quarto (.qmd). Cette application nécessite Quarto pour le rendu HTML, c'est pourquoi le déploiement sur SSP Cloud est idéal.
+This repository contains the deployment configuration for [Quartify](https://github.com/ddotta/quartify), an R package that automatically converts R scripts into Quarto markdown documents (.qmd).
 
-## Prérequis
+**Docker Image**: [ddottaagr/quartify:latest](https://hub.docker.com/r/ddottaagr/quartify)
 
-- Un compte sur [SSP Cloud](https://datalab.sspcloud.fr/)
-- Kubectl configuré (optionnel)
-- Helm 3+ (optionnel)
+## Application Features
 
-## Déploiement rapide via SSP Cloud
+The Quartify web application offers:
 
-### Option 1 : Interface Web SSP Cloud
+-  Interactive Shiny interface (EN/FR)
+-  R  Quarto (.qmd) conversion
+-  **HTML rendering with Quarto** (Quarto is installed in the Docker image)
+-  Support for callouts, tabsets, Mermaid diagrams
+-  Source line numbers for traceability
+-  Customizable Quarto themes (25+ themes)
+-  Download generated .qmd and .html files
 
-1. Se connecter sur [SSP Cloud](https://datalab.sspcloud.fr/)
-2. Aller dans "Catalog" → "Helm Charts"
-3. Sélectionner "Custom Helm Chart"
-4. Configuration :
-   - **Name** : quartify
-   - **Chart Repository** : `https://github.com/ddotta/quartify_deployment`
-   - **Values File** : `values-sspcloud.yaml`
-5. Lancer le service
+## Deployment on SSP Cloud
 
-### Option 2 : Helm CLI
+### Prerequisites
+
+- Access to [SSP Cloud](https://datalab.sspcloud.fr/)
+- Active user account
+
+### Option 1: Via Web Interface (Recommended)
+
+1. Log in to https://datalab.sspcloud.fr/
+2. Go to **My Lab**  **Service Catalog**
+3. Search for "Shiny" or create a custom service
+4. In the configuration:
+   - **Repository**: `https://github.com/ddotta/quartify_deployment`
+   - **Chart**: `.` (root of the repository)
+   - **Values file**: `values-sspcloud.yaml`
+5. Click **Launch**
+6. Once the service is started, click on the provided URL
+
+### Option 2: Via Helm CLI
 
 ```bash
-# Cloner le dépôt
+# Clone the repository
 git clone https://github.com/ddotta/quartify_deployment.git
 cd quartify_deployment
 
-# Installer avec Helm
+# Install with Helm
 helm install quartify . -f values-sspcloud.yaml
 
-# Mettre à jour
-helm upgrade quartify . -f values-sspcloud.yaml
+# Get the service URL
+kubectl get ingress
+```
 
-# Désinstaller
-helm uninstall quartify
+### Option 3: Via kubectl
+
+```bash
+# Apply manifests directly
+kubectl apply -f templates/
 ```
 
 ## Configuration
 
-### Fichiers principaux
+### Main Files
 
-- **Chart.yaml** : Métadonnées du chart Helm
-- **values.yaml** : Configuration par défaut
-- **values-sspcloud.yaml** : Configuration spécifique SSP Cloud
-- **templates/** : Templates Kubernetes (Deployment, Service, Ingress)
+- **`Chart.yaml`**: Helm chart metadata
+- **`values.yaml`**: Default configuration
+- **`values-sspcloud.yaml`**: SSP Cloud specific configuration
+- **`templates/`**: Kubernetes manifests (Deployment, Service, Ingress)
 
-### Personnalisation
+### Customization
 
-Éditez `values-sspcloud.yaml` pour personnaliser :
+To modify the configuration, edit `values-sspcloud.yaml`:
 
 ```yaml
-# Ressources
+image:
+  repository: ddottaagr/quartify
+  tag: latest
+  pullPolicy: Always
+
 resources:
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"
   requests:
-    cpu: 1000m      # Ajuster selon besoin
-    memory: 2Gi     # Ajuster selon besoin
+    memory: "1Gi"
+    cpu: "1000m"
 
-# Domaine
+service:
+  type: ClusterIP
+  port: 3838
+
 ingress:
+  enabled: true
   hosts:
-    - host: votre-quartify.lab.sspcloud.fr  # Changer le sous-domaine
+    - host: quartify.lab.sspcloud.fr
 ```
 
-## Architecture
+## Repository Structure
 
 ```
-┌─────────────────────────────────────────┐
-│           Internet/SSP Cloud            │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│         Ingress (HTTPS/TLS)             │
-│    quartify.lab.sspcloud.fr             │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│      Service (ClusterIP:80)             │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│      Deployment (Pod)                   │
-│  ┌─────────────────────────────────┐   │
-│  │ Init Container                  │   │
-│  │ - Install Quarto 1.4.549        │   │
-│  │ - Install R dependencies        │   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │ Main Container                  │   │
-│  │ - Image: onyxia-r-minimal:4.3.3 │   │
-│  │ - Shiny App on port 3838        │   │
-│  │ - quartify from GitHub          │   │
-│  └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
+quartify_deployment/
+ Chart.yaml                 # Helm metadata
+ values.yaml                # Default configuration
+ values-sspcloud.yaml       # SSP Cloud configuration
+ templates/
+    deployment.yaml        # Kubernetes Deployment
+    service.yaml          # Kubernetes Service
+    ingress.yaml          # Ingress for exposure
+    _helpers.tpl          # Helm template helpers
+ README.md                  # This file
+ README_FR.md              # French version
 ```
 
-## Ressources
+## Docker Image
 
-- **CPU** : 1 vCPU (request), 2 vCPU (limit)
-- **Mémoire** : 2 GB (request), 4 GB (limit)
-- **Port** : 3838 (Shiny)
+The `ddottaagr/quartify` Docker image contains:
 
-## Fonctionnalités
+- **R 4.4.1** (rocker/shiny)
+- **Shiny Server**
+- **Quarto 1.4.549**  (enables HTML rendering)
+- **quartify package** (installed from GitHub)
+- All required R dependencies
 
-✅ Conversion R → Quarto (.qmd)  
-✅ Rendu HTML complet avec Quarto  
-✅ Interface Shiny interactive  
-✅ Support des numéros de ligne  
-✅ HTTPS/TLS automatique  
-✅ Hébergement gratuit sur SSP Cloud  
+### Building the Image
 
-## Dépannage
+The image is automatically built via GitHub Actions on every push to the `main` branch of the [quartify](https://github.com/ddotta/quartify) repository.
 
-### Le service ne démarre pas
+To build manually:
 
 ```bash
-# Vérifier les pods
-kubectl get pods -l app.kubernetes.io/name=quartify
+# Clone the main repository
+git clone https://github.com/ddotta/quartify.git
+cd quartify
 
-# Voir les logs
-kubectl logs -l app.kubernetes.io/name=quartify
+# Build the image
+docker build -t ddottaagr/quartify:latest .
 
-# Décrire le pod
-kubectl describe pod -l app.kubernetes.io/name=quartify
+# Test locally
+docker run -p 3838:3838 ddottaagr/quartify:latest
 ```
 
-### Quarto non trouvé
+## Troubleshooting
 
-Vérifier que l'init container s'est bien exécuté :
+### Service Won't Start
 
 ```bash
-kubectl logs <pod-name> -c install-quarto
+# Check pod logs
+kubectl get pods
+kubectl logs <pod-name>
+
+# Check events
+kubectl describe pod <pod-name>
 ```
 
-### Problèmes de ressources
+### Resource Issues
 
-Augmenter les limites dans `values-sspcloud.yaml` :
+If the pod is in `OOMKilled` state (out of memory), increase limits in `values-sspcloud.yaml`:
 
 ```yaml
 resources:
   limits:
-    memory: 6Gi  # Au lieu de 4Gi
+    memory: "4Gi"  # Increase to 4GB
 ```
 
-## Mise à jour
+### Application Not Responding
 
-### Mettre à jour la version de quartify
-
-Le déploiement récupère automatiquement la dernière version depuis GitHub. Pour forcer une mise à jour :
+Verify the port is correct:
 
 ```bash
-# Supprimer le pod pour forcer un redéploiement
-kubectl delete pod -l app.kubernetes.io/name=quartify
+# Service should be on port 3838
+kubectl get service quartify
+```
 
-# Ou via Helm
+## Updates
+
+To update the application with a new image version:
+
+```bash
+# Update the deployment
 helm upgrade quartify . -f values-sspcloud.yaml
+
+# Or force restart
+kubectl rollout restart deployment/quartify
 ```
 
-### Mettre à jour Quarto
+## Useful Links
 
-Modifier la version dans `values.yaml` :
-
-```yaml
-initContainers:
-  - name: install-quarto
-    command:
-      - /bin/bash
-      - -c
-      - |
-        wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.5.0/quarto-1.5.0-linux-amd64.deb
-        # ...
-```
+-  **Main Repository**: https://github.com/ddotta/quartify
+-  **Docker Image**: https://hub.docker.com/r/ddottaagr/quartify
+-  **Documentation**: https://ddotta.github.io/quartify/
+-  **SSP Cloud**: https://datalab.sspcloud.fr/
 
 ## Support
 
-- **Issues quartify** : https://github.com/ddotta/quartify/issues
-- **Issues déploiement** : https://github.com/ddotta/quartify_deployment/issues
-- **Documentation SSP Cloud** : https://docs.sspcloud.fr/
+For any questions or issues:
 
-## Licence
+- Open an [issue on GitHub](https://github.com/ddotta/quartify/issues)
+- Consult the [complete documentation](https://ddotta.github.io/quartify/)
 
-Ce dépôt de déploiement est sous licence MIT. L'application quartify a sa propre licence.
+## License
+
+This deployment project follows the same license as the main Quartify project (MIT).
