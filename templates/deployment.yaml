@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "quartify.fullname" . }}
@@ -14,30 +14,10 @@ spec:
       labels:
         {{- include "quartify.selectorLabels" . | nindent 8 }}
     spec:
-      {{- if .Values.initContainers }}
-      initContainers:
-        {{- toYaml .Values.initContainers | nindent 8 }}
-      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - /bin/bash
-            - -c
-            - |
-              # Installer Quarto si pas déjà présent
-              if ! command -v quarto &> /dev/null; then
-                apt-get update && apt-get install -y wget
-                wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.549/quarto-1.4.549-linux-amd64.deb
-                dpkg -i quarto-1.4.549-linux-amd64.deb
-                rm quarto-1.4.549-linux-amd64.deb
-              fi
-              # Installer les dépendances R
-              Rscript -e "if (!require('remotes')) install.packages('remotes', repos='https://cloud.r-project.org')"
-              Rscript -e "if (!require('quartify')) remotes::install_github('ddotta/quartify')"
-              # Lancer l'application Shiny
-              Rscript -e "quartify::quartify_app()"
           ports:
             - name: http
               containerPort: {{ .Values.shiny.port }}
@@ -49,18 +29,11 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            {{- if .Values.volumes }}
-            {{- range .Values.volumes }}
-            - name: {{ .name }}
-              mountPath: {{ .mountPath }}
-            {{- end }}
-            {{- end }}
           livenessProbe:
             httpGet:
               path: /
               port: http
-            initialDelaySeconds: 60
+            initialDelaySeconds: 90
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
@@ -68,11 +41,7 @@ spec:
             httpGet:
               path: /
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
-      volumes:
-        {{- if .Values.volumes }}
-        {{- toYaml .Values.volumes | nindent 8 }}
-        {{- end }}
