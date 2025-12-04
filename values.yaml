@@ -1,9 +1,9 @@
-﻿# Configuration par défaut pour quartify
+# Configuration par d�faut pour quartify
 
 replicaCount: 1
 
 image:
-  repository: ddotta/quartify
+  repository: ddottaagr/quartify
   tag: latest
   pullPolicy: Always
 
