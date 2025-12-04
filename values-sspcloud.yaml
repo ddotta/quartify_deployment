@@ -1,4 +1,4 @@
-# Configuration spécifique pour SSP Cloud
+# Configuration specifique pour SSP Cloud
 
 # Ingress avec domaine SSP Cloud
 ingress:
@@ -16,7 +16,7 @@ ingress:
       hosts:
         - quartify.lab.sspcloud.fr
 
-# Ressources optimisées pour SSP Cloud
+# Ressources optimisees pour SSP Cloud
 resources:
   requests:
     cpu: 1000m
@@ -25,6 +25,6 @@ resources:
     cpu: 2000m
     memory: 4Gi
 
-# Désactiver la persistence (non nécessaire pour cette app)
+# Desactiver la persistence (non necessaire pour cette app)
 persistence:
   enabled: false
