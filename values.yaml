@@ -1,0 +1,93 @@
+# Configuration par défaut pour quartify
+
+replicaCount: 1
+
+image:
+  repository: inseefrlab/onyxia-r-minimal
+  tag: r4.3.3
+  pullPolicy: IfNotPresent
+
+# Configuration Git pour récupérer le code
+git:
+  enabled: true
+  repository: https://github.com/ddotta/quartify.git
+  branch: main
+  path: /home/onyxia/work
+
+# Application Shiny
+shiny:
+  port: 3838
+
+# Ressources
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+
+# Service
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3838
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: quartify.lab.sspcloud.fr
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: quartify-tls
+      hosts:
+        - quartify.lab.sspcloud.fr
+
+# Security
+security:
+  allowlist:
+    enabled: false
+
+# Persistence
+persistence:
+  enabled: false
+  size: 10Gi
+  storageClass: standard
+
+# Environment variables
+env:
+  SHINY_PORT: "3838"
+  SHINY_HOST: "0.0.0.0"
+
+# Init containers pour installer Quarto et dépendances
+initContainers:
+  - name: install-quarto
+    image: inseefrlab/onyxia-r-minimal:r4.3.3
+    command:
+      - /bin/bash
+      - -c
+      - |
+        apt-get update && apt-get install -y wget
+        wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.549/quarto-1.4.549-linux-amd64.deb
+        dpkg -i quarto-1.4.549-linux-amd64.deb
+        rm quarto-1.4.549-linux-amd64.deb
+        # Installer les dépendances R
+        Rscript -e "install.packages(c('shiny', 'shinyFiles', 'miniUI', 'base64enc', 'cli', 'remotes'), repos='https://cloud.r-project.org')"
+        Rscript -e "remotes::install_github('ddotta/quartify')"
+    volumeMounts:
+      - name: quarto-bin
+        mountPath: /opt/quarto
+      - name: r-libs
+        mountPath: /usr/local/lib/R/site-library
+
+volumes:
+  - name: quarto-bin
+    emptyDir: {}
+  - name: r-libs
+    emptyDir: {}

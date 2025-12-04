@@ -1,0 +1,30 @@
+# Configuration spécifique pour SSP Cloud
+
+# Ingress avec domaine SSP Cloud
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: quartify.lab.sspcloud.fr
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: quartify-tls
+      hosts:
+        - quartify.lab.sspcloud.fr
+
+# Ressources optimisées pour SSP Cloud
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+
+# Désactiver la persistence (non nécessaire pour cette app)
+persistence:
+  enabled: false

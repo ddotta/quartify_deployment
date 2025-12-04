@@ -1,0 +1,19 @@
+apiVersion: v2
+name: quartify
+description: Application web pour convertir des scripts R en documents Quarto
+type: application
+version: 0.0.5
+appVersion: "0.0.5"
+maintainers:
+  - name: Damien Dotta
+    url: https://github.com/ddotta
+sources:
+  - https://github.com/ddotta/quartify
+keywords:
+  - r
+  - quarto
+  - shiny
+  - conversion
+  - sspcloud
+home: https://github.com/ddotta/quartify
+icon: https://raw.githubusercontent.com/ddotta/quartify/main/man/figures/logo.png
